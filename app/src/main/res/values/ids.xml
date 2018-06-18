@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="textLog" type="id">textLog</item>
+    <item name="textLogScrollView" type="id">scrollView</item>
+</resources>
