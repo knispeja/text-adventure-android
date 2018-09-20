@@ -1,4 +1,4 @@
-package knispeja.textadventure.knispeja.textadventure.ui;
+package knispeja.textadventure.ui;
 
 import android.app.Activity;
 import android.text.SpannableStringBuilder;
@@ -8,21 +8,22 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import knispeja.textadventure.R;
+import knispeja.textadventure.ui.style.IScrollingTextStyle;
+import knispeja.textadventure.ui.style.ITextStyle;
+import knispeja.textadventure.ui.style.ScrollingTextStyle;
+import knispeja.textadventure.ui.style.TextStyle;
 
-public class TextLog
+public class TextLog implements ITextLog
 {
-	public int delayPerCharacterMs;
+	private int delayPerCharacterMs;
 
 	private static final int MAXIMUM_LOG_CHARACTERS = 300;
-	private static final int DEFAULT_DELAY_PER_CHARACTER_MS = 6;
-	private static final int COMMA_DELAY_MULTIPLIER = 5;
-	private static final int PERIOD_DELAY_MULTIPLIER = 10;
 
 	private final Activity activity;
 	private final TextView logTextView;
 	private final ScrollView scrollView;
 
-	private TextStyle textStyle;
+	private ScrollingTextStyle textStyle;
 
 	public TextLog(Activity activity)
 	{
@@ -30,62 +31,33 @@ public class TextLog
 		this.logTextView = activity.findViewById(R.id.textLog);
 		this.scrollView = activity.findViewById(R.id.textLogScrollView);
 
-		this.textStyle = new TextStyle();
-
-		this.delayPerCharacterMs = DEFAULT_DELAY_PER_CHARACTER_MS;
+		this.textStyle = new ScrollingTextStyle();
 	}
 
-	public TextStyle getTextStyle()
+	public IScrollingTextStyle getTextStyle()
 	{
 		return this.textStyle;
 	}
 
-	public void setTextStyle(TextStyle textStyle)
+	public synchronized void appendWithNewLine(final CharSequence textToAdd)
 	{
-		this.textStyle = textStyle;
+		append("\n" + textToAdd);
 	}
 
-	public synchronized void nextLine()
+	public synchronized void append(final CharSequence textToAdd)
 	{
-		appendLogText("\n");
-	}
-
-	public synchronized void addToLog(CharSequence text)
-	{
-		addToLog(text, true);
-	}
-
-	public synchronized void addToLog(CharSequence textToAdd, boolean automaticNewline)
-	{
-		CharSequence logText = this.logTextView.getText();
-		if (automaticNewline)
-		{
-			if (logText.length() > 0)
-			{
-				nextLine();
-			}
-		}
-
 		if (textToAdd == null || textToAdd.length() == 0)
 		{
 			return;
 		}
 
-		logText = this.logTextView.getText();
-		SpannableStringBuilder builder = this.textStyle.startFormattedText(textToAdd.charAt(0));
+		CharSequence logText = this.logTextView.getText();
+		String firstCharacter = Character.toString(textToAdd.charAt(0));
+		SpannableStringBuilder builder = this.textStyle.startFormattedText(firstCharacter);
 		for (int i=1; i<textToAdd.length(); i++)
 		{
 			char currentChar = textToAdd.charAt(i);
-
-			int delayMs = this.delayPerCharacterMs;
-			if (currentChar == ',')
-			{
-				delayMs *= COMMA_DELAY_MULTIPLIER;
-			}
-			else if (currentChar == '.')
-			{
-				delayMs *= PERIOD_DELAY_MULTIPLIER;
-			}
+			int delayMs = this.textStyle.getDelayForCharacterMs(currentChar);
 
 			try
 			{
@@ -96,10 +68,12 @@ public class TextLog
 				return;
 			}
 
+			// Ensures that the new character is styled
 			builder.append(currentChar);
-			setLog(logText, builder);
+			set(logText, builder);
 		}
 
+		// Cut off the top of the log if we exceeded the character limit
 		logText = this.logTextView.getText();
 		if (logText.length() > MAXIMUM_LOG_CHARACTERS)
 		{
@@ -109,18 +83,33 @@ public class TextLog
 				int secondNewline = TextUtils.indexOf(logText, '\n', firstNewline);
 				if (secondNewline >= 0 && secondNewline < logText.length() - 2)
 				{
-					setLog(logText.subSequence(secondNewline + 1, logText.length()));
+					set(logText.subSequence(secondNewline + 1, logText.length()));
 				}
 			}
 		}
 	}
 
-	public synchronized void clearLog()
+	public synchronized void clear()
 	{
-		setLog("");
+		set("");
 	}
 
-	public synchronized void setLog(final CharSequence... textArgs)
+	public synchronized void nextLine()
+	{
+		append("\n");
+	}
+
+	public void scrollToBottom()
+	{
+		View lastChild = scrollView.getChildAt(scrollView.getChildCount() - 1);
+		int bottom = lastChild.getBottom() + scrollView.getPaddingBottom();
+		int sy = scrollView.getScrollY();
+		int sh = scrollView.getHeight();
+		int delta = bottom - (sy + sh);
+		scrollView.scrollBy(0, delta);
+	}
+
+	public synchronized void set(final CharSequence... textArgs)
 	{
 		if (textArgs.length < 1)
 		{
@@ -145,8 +134,7 @@ public class TextLog
 		setTextTask.runOnUiThread(this.activity);
 	}
 
-
-	private synchronized void appendLogText(final CharSequence text)
+	private synchronized void appendSimple(final CharSequence text)
 	{
 		final UiThreadTask setTextTask = new UiThreadTask()
 		{
@@ -159,15 +147,5 @@ public class TextLog
 		};
 
 		setTextTask.runOnUiThread(this.activity);
-	}
-
-	private void scrollToBottom()
-	{
-		View lastChild = scrollView.getChildAt(scrollView.getChildCount() - 1);
-		int bottom = lastChild.getBottom() + scrollView.getPaddingBottom();
-		int sy = scrollView.getScrollY();
-		int sh = scrollView.getHeight();
-		int delta = bottom - (sy + sh);
-		scrollView.scrollBy(0, delta);
 	}
 }

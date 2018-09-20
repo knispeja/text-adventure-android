@@ -1,4 +1,4 @@
-package knispeja.textadventure.knispeja.textadventure.ui;
+package knispeja.textadventure.ui;
 
 import android.app.Activity;
 

@@ -1,16 +1,15 @@
 package knispeja.textadventure;
 
-import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 
-import knispeja.textadventure.knispeja.textadventure.ui.TextLog;
+import knispeja.textadventure.ui.TextLog;
 
 public class MainActivity extends AppCompatActivity
 {
-    TextLog log;
-    int x = 0;
+    private TextLog log;
+    private int x = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -26,7 +25,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void run()
         {
-            log.addToLog("This is some long text intended to wrap around at least one line... " + x++);
+            log.appendWithNewLine("This is some long text intended to wrap around at least one line... " + x++);
         }
     };
 
